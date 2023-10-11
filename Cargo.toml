@@ -1,0 +1,12 @@
+[workspace]
+
+members = [
+    "asn1-per",
+    "sctp",
+    "net",
+    "ngap",
+    "f1ap",
+    "e1ap",
+    "xxap",
+    "rrc",
+]
