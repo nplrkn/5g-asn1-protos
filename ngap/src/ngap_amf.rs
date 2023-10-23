@@ -4,12 +4,28 @@ use super::top_pdu::*;
 use crate::{InitiatingMessage, NgapPdu};
 use asn1_per::*;
 use async_trait::async_trait;
-use slog::Logger;
+use net::{Application, EventHandler, TnlaEvent};
+use slog::{error, Logger};
 
-pub struct NgapAmf<T>(pub T)
+#[derive(Clone)]
+pub struct NgapAmf<T>(pub T);
+
+impl<T> Application for NgapAmf<T> where
+    T: RequestProvider<NgSetupProcedure>
+        + RequestProvider<RanConfigurationUpdateProcedure>
+        + EventHandler
+{
+}
+
+#[async_trait]
+impl<T> EventHandler for NgapAmf<T>
 where
-    T: RequestProvider<NgSetupProcedure> + RequestProvider<RanConfigurationUpdateProcedure>;
-
+    T: EventHandler,
+{
+    async fn handle_event(&self, event: TnlaEvent, tnla_id: u32, logger: &Logger) {
+        self.0.handle_event(event, tnla_id, logger).await;
+    }
+}
 #[async_trait]
 impl<T> InterfaceProvider for NgapAmf<T>
 where
@@ -27,7 +43,10 @@ where
             NgapPdu::InitiatingMessage(InitiatingMessage::NgSetupRequest(req)) => {
                 NgSetupProcedure::call_provider(&self.0, req, logger).await
             }
-            _ => return None,
+            _ => {
+                error!(logger, "Unimplemented NGAP PDU {:?}", p);
+                None
+            }
         }
     }
 }
