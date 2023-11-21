@@ -14,6 +14,8 @@ impl<T> Application for NgapAmf<T> where
     T: RequestProvider<NgSetupProcedure>
         + RequestProvider<RanConfigurationUpdateProcedure>
         + EventHandler
+        + IndicationHandler<InitialUeMessageProcedure>
+        + IndicationHandler<UplinkNasTransportProcedure>
 {
 }
 
@@ -32,7 +34,9 @@ where
     T: Send
         + Sync
         + RequestProvider<NgSetupProcedure>
-        + RequestProvider<RanConfigurationUpdateProcedure>,
+        + RequestProvider<RanConfigurationUpdateProcedure>
+        + IndicationHandler<InitialUeMessageProcedure>
+        + IndicationHandler<UplinkNasTransportProcedure>,
 {
     type TopPdu = NgapPdu;
     async fn route_request(&self, p: NgapPdu, logger: &Logger) -> Option<ResponseAction<NgapPdu>> {
@@ -42,6 +46,14 @@ where
             }
             NgapPdu::InitiatingMessage(InitiatingMessage::NgSetupRequest(req)) => {
                 NgSetupProcedure::call_provider(&self.0, req, logger).await
+            }
+            NgapPdu::InitiatingMessage(InitiatingMessage::InitialUeMessage(req)) => {
+                InitialUeMessageProcedure::call_provider(&self.0, req, logger).await;
+                None
+            }
+            NgapPdu::InitiatingMessage(InitiatingMessage::UplinkNasTransport(req)) => {
+                UplinkNasTransportProcedure::call_provider(&self.0, req, logger).await;
+                None
             }
             _ => {
                 error!(logger, "Unimplemented NGAP PDU {:?}", p);
