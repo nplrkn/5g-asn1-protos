@@ -11,6 +11,7 @@ use slog::{debug, info, Logger};
 use std::fmt::Debug;
 
 pub trait Pdu: SerDes + 'static + Send + Sync + Clone + Debug {}
+impl<P: SerDes + 'static + Send + Sync + Clone + Debug> Pdu for P {}
 
 /// Base struct for building mocks
 pub struct Mock<P: Pdu> {
